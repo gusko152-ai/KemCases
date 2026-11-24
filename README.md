@@ -1,23 +1,26 @@
 # KemCases
 
-Telegram bot + Telegram Mini App starter for a Standoff 2 gold rewards community.
+Telegram bot + Telegram Mini App prototype for the KemCases project.
 
-## Included
-- Telegram bot menu: balance, reward history, referrals and withdrawal requests.
-- Admin review flow for withdrawal requests.
-- PostgreSQL-ready database (SQLite is supported for local development).
-- Mini App shell for the rewarded-ad provider integration.
-- Server-side signed callback endpoint with idempotency protection.
+## Main menu prototype
+- Profile: Telegram name and ID, balance, active withdrawal count, Premium flag placeholder.
+- Earn gold: active video tasks are listed in the bot; the Mini App opens the video and a countdown.
+- Cases, withdrawals, support and their admin sections have navigation and explanatory screens. Their transaction/workflow logic is not yet implemented.
+- Admin menu: video task management and a view of existing withdrawal records.
 
-## Important
-Rewarded ads are **disabled by default**. Do not credit balances from a button click or a client-side event. Connect an ad network that explicitly permits incentivized traffic and virtual-currency rewards, then implement its server-to-server verification in `app/ads.py`. Confirm Standoff 2 rules and the provider's terms before launch. This project does not generate advertising revenue by itself.
+## Video rewards safety
+The Mini App countdown is only a viewing interface. **Rewards are disabled by default** and must not be enabled by setting a flag until a compliant ad provider has been integrated with server-to-server verification. A client-side timer or button is not proof of a paid ad view. This project does not generate advertising revenue by itself.
+
+## Current admin commands
+- `/admin` — command guide
+- `/addvideo Title | https://...mp4 | duration_seconds | reward_G`
+- `/videos`
+- `/disablevideo ID`
+- `/requests`, `/approve ID`, `/reject ID` — legacy withdrawal-record commands
 
 ## Run locally
 1. Copy `.env.example` to `.env` and set `BOT_TOKEN`.
 2. Install: `pip install -r requirements.txt`
 3. Run: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
 
-The bot starts polling when the application starts. Set `ADMIN_IDS` to comma-separated Telegram numeric IDs.
-
-## Deploy
-See [docs/DEPLOY.md](docs/DEPLOY.md). Use managed PostgreSQL in production; Render's local filesystem is ephemeral on the free service tier.
+Set `ADMIN_IDS` to comma-separated Telegram numeric IDs. See [docs/DEPLOY.md](docs/DEPLOY.md) for hosting notes.
