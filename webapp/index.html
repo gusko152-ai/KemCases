@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KemCases</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#101318;color:#f4f6fb;font:16px system-ui;padding:24px}
+main{max-width:520px;margin:8vh auto;background:#1b2029;border:1px solid #303846;border-radius:22px;padding:26px}
+h1{margin:0 0 10px;font-size:28px}p{color:#aeb8c8;line-height:1.5}
+.status{padding:14px;border-radius:14px;background:#292f3b;margin:20px 0}
+button{width:100%;border:0;border-radius:13px;padding:15px;background:#657cf6;color:white;font-weight:700;font-size:16px}
+small{display:block;color:#8d98aa;margin-top:16px}
+</style></head>
+<body><main>
+<h1>🎬 KemCases</h1>
+<p>Раздел рекламных заданий.</p>
+<div class="status" id="status">Рекламный провайдер ещё не подключён. Начисления временно отключены.</div>
+<button id="close">Вернуться в Telegram</button>
+<small>Вознаграждение начисляется только после подтверждения просмотра сервером рекламной сети.</small>
+</main>
+<script>
+const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
+document.getElementById('close').onclick=()=>tg?.close();
+</script></body></html>
