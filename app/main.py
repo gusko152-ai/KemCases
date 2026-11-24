@@ -37,6 +37,13 @@ async def list_videos(request:Request):
     user=get_webapp_user(request)
     async with Session() as db:
         rows=(await db.execute(select(Video).where(Video.active.is_(True)).order_by(Video.id))).scalars().all()
+        completed_ids=(await db.execute(
+            select(WatchSession.video_id).where(
+                WatchSession.user_id==user["id"],
+                WatchSession.rewarded.is_(True)
+            )
+        )).scalars().all()
+        rows=[video for video in rows if video.id not in set(completed_ids)]
         today=datetime.now(timezone.utc).date()
         start=datetime(today.year,today.month,today.day,tzinfo=timezone.utc)
         used=(await db.execute(select(func.count(WatchSession.id)).where(WatchSession.user_id==user["id"],WatchSession.rewarded.is_(True),WatchSession.completed_at>=start))).scalar_one()
@@ -53,6 +60,14 @@ async def start_watch(request:Request):
             user=User(id=ud["id"],username=ud.get("username")); db.add(user); await db.flush()
         video=await db.get(Video,video_id)
         if not video or not video.active: raise HTTPException(404,"Видео не найдено")
+        already_done=(await db.execute(
+            select(WatchSession.id).where(
+                WatchSession.user_id==user.id,
+                WatchSession.video_id==video.id,
+                WatchSession.rewarded.is_(True)
+            ).limit(1)
+        )).scalar_one_or_none()
+        if already_done: raise HTTPException(409,"Это задание уже выполнено")
         today=datetime.now(timezone.utc).date()
         start=datetime(today.year,today.month,today.day,tzinfo=timezone.utc)
         used=(await db.execute(select(func.count(WatchSession.id)).where(WatchSession.user_id==user.id,WatchSession.rewarded.is_(True),WatchSession.completed_at>=start))).scalar_one()

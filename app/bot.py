@@ -98,7 +98,7 @@ async def profile(call: CallbackQuery):
                 )
             )
         ).scalar_one()
-    premium_text = "Нет"
+    premium_text = "Нет (функция Premium ещё не подключена)"
     # Premium dates will be stored when the premium subscription feature is added.
     text = (
         "👤 ТВОЙ ПРОФИЛЬ\n\n"
