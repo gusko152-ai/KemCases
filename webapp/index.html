@@ -1,25 +1,57 @@
 <!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KemCases</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KemCases</title><script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#101318;color:#f4f6fb;font:16px system-ui;padding:24px}
-main{max-width:520px;margin:8vh auto;background:#1b2029;border:1px solid #303846;border-radius:22px;padding:26px}
-h1{margin:0 0 10px;font-size:28px}p{color:#aeb8c8;line-height:1.5}
-.status{padding:14px;border-radius:14px;background:#292f3b;margin:20px 0}
-button{width:100%;border:0;border-radius:13px;padding:15px;background:#657cf6;color:white;font-weight:700;font-size:16px}
-small{display:block;color:#8d98aa;margin-top:16px}
-</style></head>
-<body><main>
-<h1>🎬 KemCases</h1>
-<p>Раздел рекламных заданий.</p>
-<div class="status" id="status">Рекламный провайдер ещё не подключён. Начисления временно отключены.</div>
-<button id="close">Вернуться в Telegram</button>
-<small>Вознаграждение начисляется только после подтверждения просмотра сервером рекламной сети.</small>
-</main>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#101318;color:#f4f6fb;font:16px system-ui;padding:18px}
+main{max-width:560px;margin:4vh auto;background:#1b2029;border:1px solid #303846;border-radius:22px;padding:22px}
+h1{margin:0 0 6px;font-size:27px}.muted{color:#aeb8c8}.panel{padding:14px;border-radius:14px;background:#292f3b;margin:14px 0}
+video{width:100%;border-radius:14px;background:#080a0e;max-height:320px}
+button{width:100%;border:0;border-radius:13px;padding:14px;background:#657cf6;color:white;font-weight:700;font-size:16px;margin-top:10px}
+button:disabled{opacity:.45}.item{border:1px solid #3a4352;padding:14px;border-radius:14px;margin:10px 0}
+</style></head><body><main>
+<h1>🎬 KemCases</h1><p class="muted">Смотри видео и получай награды после подтверждения просмотра.</p>
+<div id="status" class="panel">Загружаем видео…</div><div id="videos"></div>
+<video id="player" controls playsinline hidden></video><button id="finish" hidden disabled>Завершить просмотр</button>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
-document.getElementById('close').onclick=()=>tg?.close();
-</script></body></html>
+const headers={"X-Telegram-Init-Data":tg?.initData||""};
+const status=document.getElementById("status"),list=document.getElementById("videos"),player=document.getElementById("player"),finish=document.getElementById("finish");
+let active=null,startedAt=0,required=0;
+function say(s){status.textContent=s}
+async function load(){
+ if(!tg?.initData){say("Открой Mini App через кнопку в Telegram для авторизации.");return}
+ try{
+  const r=await fetch("/api/videos",{headers});const data=await r.json();if(!r.ok)throw Error(data.detail||"Ошибка загрузки");
+  say("Просмотров с наградой сегодня: "+data.used_today+" из "+data.daily_limit);
+  if(!data.videos.length){list.textContent="Пока нет доступных роликов.";return}
+  list.innerHTML="";
+  for(const v of data.videos){
+   const el=document.createElement("div");el.className="item";
+   const title=document.createElement("b");title.textContent=v.title;
+   const info=document.createElement("p");info.className="muted";info.textContent=v.duration+" сек. • награда "+v.reward+" G";
+   const btn=document.createElement("button");btn.textContent="Смотреть";btn.onclick=()=>begin(v);
+   el.append(title,info,btn);list.append(el);
+  }
+ }catch(e){say(e.message)}
+}
+async function begin(v){
+ try{
+  const r=await fetch("/api/watch/start",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({video_id:v.id})});
+  const data=await r.json();if(!r.ok)throw Error(data.detail||"Не удалось начать просмотр");
+  active=data.session_token;required=data.duration;startedAt=Date.now();
+  player.src=v.url;player.hidden=false;finish.hidden=false;finish.disabled=true;await player.play();
+  say("Досмотри ролик до конца. После этого можно завершить просмотр.");
+  const tick=setInterval(()=>{if(!active){clearInterval(tick);return}if((Date.now()-startedAt)/1000>=required&&player.ended){finish.disabled=false;clearInterval(tick)}},500);
+ }catch(e){say(e.message)}
+}
+finish.onclick=async()=>{
+ if(!active)return;
+ try{
+  const r=await fetch("/api/watch/complete",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify({session_token:active})});
+  const data=await r.json();if(!r.ok)throw Error(data.detail||"Не удалось подтвердить просмотр");
+  say("Просмотр подтверждён. Начислено "+data.reward+" G. Баланс: "+data.balance+" G.");
+  active=null;finish.hidden=true;player.hidden=true;player.pause();load();
+ }catch(e){say(e.message)}
+};
+load();
+</script></main></body></html>
