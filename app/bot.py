@@ -39,8 +39,8 @@ async def start(message: Message):
         ref = int(args[1][4:])
     await ensure_user(message.from_user, ref)
     await message.answer(
-        "Привет! Это KemCases. Здесь можно смотреть доступные задания, следить за балансом и отправлять заявки на вывод.\n\n"
-        "Начисления за рекламу пока отключены до подключения и проверки рекламного провайдера.",
+        "Привет! Это KemCases. Здесь можно смотреть видео, следить за балансом, приглашать друзей и отправлять заявки на вывод.\n\n"
+        "Начисления за просмотры включим после подключения рекламного провайдера.",
         reply_markup=menu()
     )
 
@@ -153,3 +153,59 @@ async def reject(message: Message):
         db.add(Ledger(user_id=user.id, amount=req.amount, reason=f"Возврат по заявке №{req.id}"))
         await db.commit()
     await message.answer(f"Заявка №{req.id} отклонена, сумма возвращена.")
+
+
+@router.message(Command("addvideo"))
+async def add_video(message: Message):
+    if message.from_user.id not in settings.admins:
+        return
+    from .models import Video
+    parts = (message.text or "").partition(" ")[2].split("|")
+    if len(parts) != 4:
+        await message.answer("Формат: /addvideo Название | HTTPS-ссылка-на-видео | длительность_сек | награда_G")
+        return
+    title, url, duration_raw, reward_raw = [x.strip() for x in parts]
+    if not url.startswith("https://") or not title or not duration_raw.isdigit() or not reward_raw.isdigit():
+        await message.answer("Проверь данные: ссылка должна начинаться с https://, длительность и награда — целые числа.")
+        return
+    duration, reward = int(duration_raw), int(reward_raw)
+    if not 5 <= duration <= 600 or not 1 <= reward <= 10000:
+        await message.answer("Длительность: 5–600 секунд. Награда: 1–10000 G.")
+        return
+    async with Session() as db:
+        video = Video(title=title[:120], url=url[:500], duration_seconds=duration, reward=reward, active=True)
+        db.add(video)
+        await db.commit()
+        await db.refresh(video)
+        video_id = video.id
+    await message.answer(f"Видео №{video_id} добавлено. Сейчас награды за просмотры заблокированы до подключения рекламной сети.")
+
+@router.message(Command("videos"))
+async def admin_videos(message: Message):
+    if message.from_user.id not in settings.admins:
+        return
+    from .models import Video
+    async with Session() as db:
+        rows = (await db.execute(select(Video).order_by(Video.id))).scalars().all()
+    if not rows:
+        await message.answer("Видео пока не добавлены. Используй /addvideo.")
+        return
+    await message.answer("\\n".join(f"№{v.id} | {v.title} | {v.duration_seconds} сек. | {v.reward} G | {'активно' if v.active else 'выключено'}" for v in rows))
+
+@router.message(Command("disablevideo"))
+async def disable_video(message: Message):
+    if message.from_user.id not in settings.admins:
+        return
+    parts=(message.text or "").split()
+    if len(parts)!=2 or not parts[1].isdigit():
+        await message.answer("Формат: /disablevideo ID")
+        return
+    from .models import Video
+    async with Session() as db:
+        video=await db.get(Video,int(parts[1]))
+        if not video:
+            await message.answer("Видео не найдено.")
+            return
+        video.active=False
+        await db.commit()
+    await message.answer(f"Видео №{video.id} отключено.")
