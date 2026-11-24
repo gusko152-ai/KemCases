@@ -104,7 +104,7 @@ async def create_withdrawal(message: Message):
 async def admin_help(message: Message):
     if message.from_user.id not in settings.admins:
         return
-    await message.answer("Админ-команды:\n/requests — ожидающие заявки\n/approve ID — подтвердить выплату\n/reject ID — вернуть сумму пользователю")
+    await message.answer("Админ-команды:\n/requests — ожидающие заявки\n/approve ID — подтвердить выплату\n/reject ID — вернуть сумму пользователю\n/addvideo Название | URL | секунды | награда — добавить ролик\n/videos — список роликов\n/disablevideo ID — отключить ролик")
     
 @router.message(Command("requests"))
 async def requests(message: Message):
@@ -190,7 +190,7 @@ async def admin_videos(message: Message):
     if not rows:
         await message.answer("Видео пока не добавлены. Используй /addvideo.")
         return
-    await message.answer("\\n".join(f"№{v.id} | {v.title} | {v.duration_seconds} сек. | {v.reward} G | {'активно' if v.active else 'выключено'}" for v in rows))
+    await message.answer("\n".join(f"№{v.id} | {v.title} | {v.duration_seconds} сек. | {v.reward} G | {'активно' if v.active else 'выключено'}" for v in rows))
 
 @router.message(Command("disablevideo"))
 async def disable_video(message: Message):
